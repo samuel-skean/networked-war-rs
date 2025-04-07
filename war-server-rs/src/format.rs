@@ -9,7 +9,7 @@
 // think...). It would be neat if we allowed some other byte, say 0xff, to
 // appear between messages. How does Rust deal with padding caused by
 // "differently-sized" enum variants, anyway?
-// 
+//
 // Also, does Rust even guarantee the layout of enums in the way that I want
 // with these `repr` options?
 #[repr(u8)]
@@ -19,7 +19,6 @@ pub enum Message {
     PlayCard(Card) = 2,
     PlayResult(RoundResult) = 3,
 }
-
 
 pub type Hand = [Card; 26];
 
@@ -79,7 +78,7 @@ impl Eq for Card {}
 // property of the wire format being the same as the in-memory format.
 #[repr(u8)]
 pub enum RoundResult {
-    Win  = 0,
+    Win = 0,
     Draw = 1,
     Lose = 2,
 }
@@ -103,7 +102,7 @@ mod test {
     use super::Card;
 
     /// We are dealing with **PLAYING CARDS**.
-    /// 
+    ///
     /// (This is some verbose 'idiot-proof' brainrot, but that's how I'm feeling
     /// rn).
     #[test]
@@ -112,7 +111,7 @@ mod test {
         assert_eq!(NUM_SUITS, 4);
         assert_eq!(NUM_CARDS_TOTAL, 52);
     }
-    
+
     const fn checked_card(value: u8) -> Card {
         assert!(value < NUM_CARDS_TOTAL);
         Card(value)
@@ -129,7 +128,7 @@ mod test {
     const QUEEN_OF_HEARTS: Card = checked_card(36);
     const KING_OF_HEARTS: Card = checked_card(37);
     const ACE_OF_HEARTS: Card = checked_card(38);
-    
+
     const QUEEN_OF_SPADES: Card = checked_card(49);
     const KING_OF_SPADES: Card = checked_card(50);
     const ACE_OF_SPADES: Card = checked_card(51);
@@ -138,9 +137,18 @@ mod test {
     fn card_format() {
         assert_eq!(size_of::<Card>(), 1);
         assert_eq!(align_of::<Card>(), 1);
-        assert_eq!(Card::try_from(2 * NUM_CARDS_IN_SUIT + 10).unwrap(), QUEEN_OF_HEARTS);
-        assert_eq!(Card::try_from(2 * NUM_CARDS_IN_SUIT + 11).unwrap(), KING_OF_HEARTS);
-        assert_eq!(Card::try_from(2 * NUM_CARDS_IN_SUIT + 12).unwrap(), ACE_OF_HEARTS);
+        assert_eq!(
+            Card::try_from(2 * NUM_CARDS_IN_SUIT + 10).unwrap(),
+            QUEEN_OF_HEARTS
+        );
+        assert_eq!(
+            Card::try_from(2 * NUM_CARDS_IN_SUIT + 11).unwrap(),
+            KING_OF_HEARTS
+        );
+        assert_eq!(
+            Card::try_from(2 * NUM_CARDS_IN_SUIT + 12).unwrap(),
+            ACE_OF_HEARTS
+        );
     }
 
     /// This test really only exists because I was gonna write it to test how
@@ -154,13 +162,12 @@ mod test {
 
         assert!(TWO_OF_CLUBS < FOUR_OF_CLUBS);
         assert!(FOUR_OF_CLUBS > TWO_OF_CLUBS);
-        
+
         assert!(THREE_OF_CLUBS < FOUR_OF_CLUBS);
         assert!(FOUR_OF_CLUBS > THREE_OF_CLUBS);
 
         assert!(THREE_OF_DIAMONDS < QUEEN_OF_SPADES);
         assert!(QUEEN_OF_SPADES > THREE_OF_DIAMONDS);
-
 
         // Reflexivity of equality
         assert_eq!(KING_OF_CLUBS, KING_OF_SPADES);
@@ -176,7 +183,5 @@ mod test {
         assert_eq!(KING_OF_CLUBS, KING_OF_HEARTS);
         assert_eq!(KING_OF_HEARTS, KING_OF_SPADES);
         assert_eq!(KING_OF_CLUBS, KING_OF_SPADES);
-
     }
-
 }

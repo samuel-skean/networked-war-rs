@@ -1,5 +1,6 @@
 {
     "rust-analyzer.diagnostics.enable": false,
     "rust-analyzer.checkOnSave": true,
-    "files.autoSave": "off"
+    "files.autoSave": "off",
+    "editor.formatOnSave": true
 }
