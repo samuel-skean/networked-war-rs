@@ -10,14 +10,41 @@
 // appear between messages. How does Rust deal with padding caused by
 // "differently-sized" enum variants, anyway?
 //
-// Also, does Rust even guarantee the layout of enums in the way that I want
-// with these `repr` options?
+// Q: Also, does Rust even guarantee the layout of enums in the way that I want
+//  with these `repr` options?
+//
+// A: It seems it does, but that's only what I want because everything in the
+//  enums boils down to a u8. For enums with payloads, a `#[repr(u8)]` is
+//  defined in terms of what C would do when compiling a certain set of unions.
+//  See [the Rustonomicon](https://doc.rust-lang.org/nomicon/other-reprs.html)
+//  and [this Rust
+//  RFC](https://github.com/rust-lang/rfcs/blob/master/text/2195-really-tagged-unions.md)
+//  that [got merged](https://github.com/rust-lang/rfcs/pull/2195).
+//
+// IMPORTANT: The "moves themselves" (without padding) currently don't have an
+// allowed wire format because the "want game" message should always be 2
+// consecutive zeroes.
+
 #[repr(u8)]
 pub enum Message {
     WantGame = 0,
     GameStart(Hand) = 1,
     PlayCard(Card) = 2,
     PlayResult(RoundResult) = 3,
+}
+
+// See above Q+A comment.
+impl AsRef<[u8]> for Message {
+    fn as_ref(&self) -> &[u8] {
+        let len = match self {
+            // STRETCH: That ain't right...
+            Message::WantGame => return &[0, 0],
+            Message::GameStart(_) => 27,
+            Message::PlayCard(card) => 2,
+            Message::PlayResult(round_result) => 2,
+        };
+        unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, len) }
+    }
 }
 
 pub type Hand = [Card; 26];
@@ -105,9 +132,27 @@ impl From<std::cmp::Ordering> for RoundResult {
 
 #[cfg(test)]
 mod test {
-    use crate::format::{NUM_CARDS_IN_SUIT, NUM_CARDS_TOTAL, NUM_SUITS};
 
-    use super::Card;
+    use super::*;
+
+    /// Miri is perfectly happy with these! I am amazed, awed, and a little bit disgusted.
+    #[test]
+    fn crazy_bit_casts() {
+        assert_eq!(Message::WantGame.as_ref(), [0, 0]);
+        assert_eq!(
+            Message::GameStart([Card::try_from(0).unwrap(); 26]).as_ref(),
+            {
+                let mut buf = [0u8; 27];
+                buf[0] = 1;
+                buf
+            }
+        );
+        assert_eq!(
+            Message::PlayCard(Card::try_from(20).unwrap()).as_ref(),
+            [2, 20]
+        );
+        assert_eq!(Message::PlayResult(RoundResult::Lose).as_ref(), [3, 2]);
+    }
 
     /// We are dealing with **PLAYING CARDS**.
     ///

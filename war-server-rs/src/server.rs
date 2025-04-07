@@ -5,7 +5,7 @@ use std::{
 
 use rand::seq::SliceRandom;
 use tokio::{
-    io::{AsyncRead, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
 
@@ -17,6 +17,26 @@ pub struct Game {
 }
 
 pub async fn serve_game(mut game: Game) {
+    // TODO: Is there any benefit to doing this in `tokio::select!`, or somehow
+    // otherwise making it concurrrent? Stuffs gonna go into my kernel buffers
+    // anyway, and we can't make progress, right? Well, we could kill the game
+    // earlier if we read from either one.
+    let mut scratch = [0; 27];
+    game.player_one
+        .0
+        .read_exact(&mut scratch[..2])
+        .await
+        .unwrap();
+    assert_eq!(&scratch[..2], Message::WantGame.as_ref());
+
+    game.player_two
+        .0
+        .read_exact(&mut scratch[..2])
+        .await
+        .unwrap();
+
+    assert_eq!(&scratch[..2], Message::WantGame.as_ref());
+
     // TODO: Consider https://docs.rs/rand/latest/rand/seq/trait.IteratorRandom.html#method.choose_multiple_fill.
     let mut all_cards_cursor = Cursor::new([0u8; NUM_CARDS_TOTAL as usize]);
     for c in 0..51 {
@@ -36,15 +56,14 @@ pub async fn serve_game(mut game: Game) {
     player_one_hand.copy_from_slice(&all_cards[..26]);
     player_two_hand.copy_from_slice(&all_cards[26..]);
 
-    // **Forreal??** *No* idea if this is safe, but it seems to give the right result now.
-    let player_one_hand_msg =
-        unsafe { std::mem::transmute::<_, [u8; 27]>(Message::GameStart(player_one_hand)) };
-
-    dbg!(player_one_hand_msg);
-
     game.player_one
         .0
-        .write_all(&player_one_hand_msg)
+        .write_all(Message::GameStart(player_one_hand).as_ref())
+        .await
+        .unwrap();
+    game.player_two
+        .0
+        .write_all(Message::GameStart(player_two_hand).as_ref())
         .await
         .unwrap();
     loop {}
