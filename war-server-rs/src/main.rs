@@ -1,6 +1,6 @@
 mod format;
 
-use std::net::IpAddr;
+use std::{net::IpAddr, process::ExitCode};
 
 use clap::Parser;
 use tokio::net::TcpListener;
@@ -13,12 +13,17 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     let args = Args::parse();
     // STRETCH: what would it mean to let the user bind to a string (e.g., a DNS
     // name)? Should I support that?
     let listener = TcpListener::bind((args.host, args.port)).await.unwrap();
     println!("Listening on {addr}", addr = listener.local_addr().unwrap());
     // TODO: When might accept fail? Also, consider `TcpListenerStream`.
-    while let Ok((conn, peer_addr)) = listener.accept().await {}
+    while let Ok((conn, peer_addr)) = listener.accept().await {
+        println!("Got client {peer_addr:?}");
+        loop {}
+    }
+    eprintln!("How did I get here?");
+    return ExitCode::from(1);
 }
