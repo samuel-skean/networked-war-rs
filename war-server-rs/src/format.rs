@@ -19,7 +19,14 @@
 //  See [the Rustonomicon](https://doc.rust-lang.org/nomicon/other-reprs.html)
 //  and [this Rust
 //  RFC](https://github.com/rust-lang/rfcs/blob/master/text/2195-really-tagged-unions.md)
-//  that [got merged](https://github.com/rust-lang/rfcs/pull/2195).
+//  that [got merged](https://github.com/rust-lang/rfcs/pull/2195). That is
+//  *not* implementation, and I cannot currently find its implementation in the
+//  [`rust-lang/rust`](repo) (the repo with compiler development), which is
+//  disturbing. It's possible this RFC was just documenting something Rust had
+//  been doing, so there is no corresponding pull request on the development
+//  repo, but there must be an implementation. (I have also found [a reference
+//  to this RFC](https://github.com/rust-lang/rust/pull/128795) in modifications
+//  to rustc error messages, which is a good sign).
 //
 // IMPORTANT: The "moves themselves" (without padding) currently don't have an
 // allowed wire format because the "want game" message should always be 2

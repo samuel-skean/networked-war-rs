@@ -17,10 +17,9 @@ pub struct Game {
 }
 
 pub async fn serve_game(mut game: Game) {
-    // TODO: Is there any benefit to doing this in `tokio::select!`, or somehow
-    // otherwise making it concurrrent? Stuffs gonna go into my kernel buffers
-    // anyway, and we can't make progress, right? Well, we could kill the game
-    // earlier if we read from either one.
+    // TODO: Make this concurrent. If one client hangs sends a malformed
+    // message, we should terminate the game. As it stands, we could hang on the
+    // first client indefinitely.
     let mut scratch = [0; 27];
     game.player_one
         .0
