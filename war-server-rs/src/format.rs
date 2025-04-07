@@ -24,14 +24,15 @@ pub type Hand = [Card; 26];
 
 const NUM_CARDS_IN_SUIT: u8 = 13;
 const NUM_SUITS: u8 = 4;
-const NUM_CARDS_TOTAL: u8 = NUM_CARDS_IN_SUIT * NUM_SUITS;
+pub const NUM_CARDS_TOTAL: u8 = NUM_CARDS_IN_SUIT * NUM_SUITS;
 /// TODO: Document mapping of rank and suit onto value.
+/// Currently this `#[repr(transparent)]` is exceedingly important for how we shuffle the cards!
 #[repr(transparent)]
 // STRETCH: Make Card displayable with its human name, too.
 //
 // SUPER (COOL) STRETCH: Enforce that name's consistency with the constants in
 // the test? Macro time? ;)
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Card(u8);
 
 #[derive(thiserror::Error, Debug)]
@@ -49,6 +50,13 @@ impl TryFrom<u8> for Card {
         } else {
             Ok(Card(value))
         }
+    }
+}
+
+impl Default for Card {
+    fn default() -> Self {
+        // TODO: This should be a niche value that is prohibited.
+        Self(0xff)
     }
 }
 
