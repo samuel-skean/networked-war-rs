@@ -46,7 +46,7 @@ pub async fn serve_game(mut game: Game) {
     let mut all_cards = unsafe {
         std::mem::transmute::<_, [Card; NUM_CARDS_TOTAL as usize]>(all_cards_cursor.into_inner())
     };
-    // Does this care at all about PartialEq? Surely not?
+    // TODO: Does this care at all about PartialEq? Surely not. It better not!
     all_cards.shuffle(&mut rand::rng());
 
     dbg!(all_cards);
