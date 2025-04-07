@@ -19,6 +19,6 @@ async fn main() {
     // name)? Should I support that?
     let listener = TcpListener::bind((args.host, args.port)).await.unwrap();
     println!("Listening on {addr}", addr = listener.local_addr().unwrap());
-    // TODO: When might accept fail? Also, consider
+    // TODO: When might accept fail? Also, consider `TcpListenerStream`.
     while let Ok((conn, peer_addr)) = listener.accept().await {}
 }
