@@ -65,5 +65,36 @@ pub async fn serve_game(mut game: Game) {
         .write_all(Message::GameStart(player_two_hand).as_ref())
         .await
         .unwrap();
-    loop {}
+    for _ in 0..26 {
+        let play_card_message_buffer = &mut scratch[..2];
+        // TODO: Implement game logic:
+        game.player_one
+            .0
+            .read_exact(play_card_message_buffer)
+            .await
+            .unwrap();
+        let message = Message::try_from(&*play_card_message_buffer)
+            .expect(format!("Bad message received from {}", game.player_one.1).as_str());
+        dbg!(message);
+        game.player_two
+            .0
+            .read_exact(play_card_message_buffer)
+            .await
+            .unwrap();
+        let message = Message::try_from(&*play_card_message_buffer)
+            .expect(format!("Bad message received from {}", game.player_two.1).as_str());
+        dbg!(message);
+
+        // TODO: Everybody wins!
+        game.player_one
+            .0
+            .write_all(Message::PlayResult(RoundResult::Win).as_ref())
+            .await
+            .expect("Unable to send message");
+        game.player_two
+            .0
+            .write_all(Message::PlayResult(RoundResult::Win).as_ref())
+            .await
+            .expect("Unable to send message");
+    }
 }

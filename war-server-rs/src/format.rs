@@ -32,25 +32,75 @@
 // allowed wire format because the "want game" message should always be 2
 // consecutive zeroes.
 
+const WANT_GAME: u8 = 0;
+const GAME_START: u8 = 1;
+const PLAY_CARD: u8 = 2;
+const PLAY_RESULT: u8 = 3;
+
+#[derive(Debug)]
 #[repr(u8)]
 pub enum Message {
-    WantGame = 0,
-    GameStart(Hand) = 1,
-    PlayCard(Card) = 2,
-    PlayResult(RoundResult) = 3,
+    WantGame = WANT_GAME,
+    GameStart(Hand) = GAME_START,
+    PlayCard(Card) = PLAY_CARD,
+    PlayResult(RoundResult) = PLAY_RESULT,
 }
 
+// TODO: Should I really be using AsRef? Seems awfully weird... maybe as_bytes would be better? Maybe both?
 // See above Q+A comment.
 impl AsRef<[u8]> for Message {
     fn as_ref(&self) -> &[u8] {
         let len = match self {
-            // STRETCH: That ain't right...
+            // STRETCH: WantGame being 2 bytes long on the wire just ain't right.
             Message::WantGame => return &[0, 0],
             Message::GameStart(_) => 27,
-            Message::PlayCard(card) => 2,
-            Message::PlayResult(round_result) => 2,
+            Message::PlayCard(_) => 2,
+            Message::PlayResult(_) => 2,
         };
         unsafe { core::slice::from_raw_parts(self as *const Self as *const u8, len) }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum MessageDecodeError {
+    // Not nice to store this redundantly.
+    #[error("Message was {0} bytes long, which is not a valid length for a WAR message.")]
+    InvalidLength(usize),
+    #[error("Message was valid up until byte {valid_up_to}.")]
+    InvalidContents { valid_up_to: u8 },
+}
+
+impl TryFrom<&[u8]> for Message {
+    type Error = MessageDecodeError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        match value.len() {
+            2 | 27 => {}
+            len => return Err(MessageDecodeError::InvalidLength(len)),
+        };
+        for (index, &payload_u8) in value.iter().enumerate().skip(1) {
+            if payload_u8 >= NUM_CARDS_TOTAL {
+                return Err(MessageDecodeError::InvalidContents {
+                    valid_up_to: index.try_into().expect(
+                        "Impossibly long message should've been caught earlier in decoding.",
+                    ),
+                });
+            }
+        }
+        let decoded = match value[0] {
+            WANT_GAME => Message::WantGame,
+            GAME_START => {
+                let cards_bytes = &value[1..];
+                assert_eq!(cards_bytes.len(), size_of::<Hand>());
+                unsafe { Message::GameStart(std::mem::transmute_copy(&cards_bytes[0])) }
+            }
+            PLAY_CARD => Message::PlayCard(Card::try_from(value[1]).expect("Impossible message should've been caught earlier! Near sure sign of memory unsafety elsewhere!")),
+            PLAY_RESULT => Message::PlayResult(RoundResult::try_from(value[1]).map_err(
+                |InvalidRoundResult { value: _ }| MessageDecodeError::InvalidContents { valid_up_to: 1 },
+            )?),
+            _ => return Err(MessageDecodeError::InvalidContents { valid_up_to: 0 })
+        };
+        Ok(decoded)
     }
 }
 
@@ -118,11 +168,29 @@ impl Eq for Card {}
 
 // We could use std::cmp::Ordering for this, but then we'd lose the nice
 // property of the wire format being the same as the in-memory format.
+#[derive(Debug)]
 #[repr(u8)]
 pub enum RoundResult {
     Win = 0,
     Draw = 1,
     Lose = 2,
+}
+
+pub struct InvalidRoundResult {
+    value: u8,
+}
+
+impl TryFrom<u8> for RoundResult {
+    type Error = InvalidRoundResult;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(RoundResult::Win),
+            1 => Ok(RoundResult::Draw),
+            2 => Ok(RoundResult::Lose),
+            _ => Err(InvalidRoundResult { value }),
+        }
+    }
 }
 
 impl From<std::cmp::Ordering> for RoundResult {
